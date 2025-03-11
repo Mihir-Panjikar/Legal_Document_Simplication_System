@@ -1,1 +1,5 @@
 *__pycache__/
+*.ipynb_checkpoints/
+design1.txt
+Documentation.txt
+Outputs.txt
