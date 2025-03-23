@@ -1,5 +1,7 @@
 import streamlit as st
 from utils.Simplification import simplify_document
+from utils.translation import translate_text
+import asyncio
 
 # Streamlit UI
 st.set_page_config(page_title="Legal Document Simplifier", layout="wide")
@@ -44,3 +46,12 @@ with col2:
                 simplified_output = simplify_document(user_input)
             st.markdown("### Simplified Text:")
             st.write(simplified_output)
+            
+            language = st.selectbox("Translate to:", ["None", "Hindi", "Marathi"], index=0)
+            
+            if language != "None":
+                lang_code = "hi" if language == "Hindi" else "mr"
+                with st.spinner(f"Translating to {language}..."):
+                    translated_output = asyncio.run(translate_text(simplified_output, src="en", dest=lang_code))
+                st.markdown(f"### Translated Text ({language}):")
+                st.write(translated_output)

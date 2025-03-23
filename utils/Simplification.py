@@ -1,7 +1,7 @@
 import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from formatter import format_messages
+from .formatter import format_messages
 
 # Setup: local model loading
 os.environ["TRANSFORMERS_OFFLINE"] = "1"  # Prevents downloading from Hugging Face
