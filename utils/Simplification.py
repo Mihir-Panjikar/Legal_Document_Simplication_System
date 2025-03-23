@@ -7,16 +7,20 @@ from .formatter import format_messages
 os.environ["TRANSFORMERS_OFFLINE"] = "1"  # Prevents downloading from Hugging Face
 local_model_path = "./DeepSeek-R1-Distill-Qwen-1.5B" 
 
-# quantization config for 8-bit model with CPU offload if needed
+# quantization config for 8-bit model
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 quantization_config = BitsAndBytesConfig(
     load_in_8bit=True,
-    llm_int8_enable_fp32_cpu_offload=True
-)
+    llm_int8_enable_fp32_cpu_offload=False
+) if device == "cuda" else None
+
 
 # Loading the quantized model and tokenizer from the local path
 model = AutoModelForCausalLM.from_pretrained(
     local_model_path,
-    device_map="auto",
+    device_map="device",
     torch_dtype=torch.float16,
     quantization_config=quantization_config
 )
