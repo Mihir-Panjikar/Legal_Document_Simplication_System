@@ -16,7 +16,8 @@ class DocumentExporter:
         Export document content to PDF with Unicode support using fpdf2
         """
 
-        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "ArialUnicode.ttf"
+        FONT_PATH = Path(__file__).resolve().parent.parent / \
+            "assets" / "ArialUnicode.ttf"
 
         # Input validation
         if title is None:
@@ -31,59 +32,60 @@ class DocumentExporter:
         # Set margins
         pdf.set_margins(20, 20, 20)
         pdf.add_page()
-        
-        pdf.add_font("ArialUnicode", "",str(FONT_PATH) , uni=True)
-        
+
+        pdf.add_font("ArialUnicode", "", str(FONT_PATH), uni=True)
+
         # With fpdf2, we can directly work with Unicode text
         # No need for the sanitize_text function
-        
+
         # Process text blocks with better fpdf2 features
         def process_text_block(text, header):
             # Add header with fpdf2 positioning
             pdf.set_font("ArialUnicode", size=12)
             pdf.cell(w=0, h=10, text=header, new_x="LMARGIN", new_y="NEXT")
             pdf.set_font("ArialUnicode", size=10)
-            
+
             # Safety check
             if text is None:
                 return
-                
+
             # With fpdf2, we can use multi_cell more effectively
             paragraphs = str(text).split('\n')
             for paragraph in paragraphs:
                 if paragraph.strip():  # Skip empty paragraphs
                     pdf.multi_cell(w=0, h=5, text=paragraph)
                     pdf.ln(2)  # Small space after paragraph
-        
+
         # Document header
         pdf.set_font("ArialUnicode", size=16)
-        pdf.cell(w=0, h=10, text="Legal Document Simplification", 
+        pdf.cell(w=0, h=10, text="Legal Document Simplification",
                  align="C", new_x="LMARGIN", new_y="NEXT")
-        
+
         # Document title
         pdf.set_font("ArialUnicode", size=12)
         safe_title = str(title)[:40] if title else "Untitled"
-        pdf.cell(w=0, h=10, text=f"Document: {safe_title}", 
+        pdf.cell(w=0, h=10, text=f"Document: {safe_title}",
                  new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)  # Space after title
-        
+
         # Process each text block
         process_text_block(original_text, "Original Text:")
         pdf.ln(5)
         process_text_block(simplified_text, "Simplified Text:")
-        
+
         # Handle translated text
         if translated_text and language:
             pdf.ln(5)
-            process_text_block(translated_text, f"Translated Text ({language}):")
-        
+            process_text_block(
+                translated_text, f"Translated Text ({language}):")
+
         # Add timestamp
         pdf.ln(5)
         pdf.set_font("ArialUnicode", size=8)
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
-        pdf.cell(w=0, h=5, text=f"Generated on: {timestamp}", 
+        pdf.cell(w=0, h=5, text=f"Generated on: {timestamp}",
                  new_x="LMARGIN", new_y="NEXT")
-        
+
         # With fpdf2, we can directly return bytes
         return pdf.output(dest='bytes').decode('latin-1')
 
@@ -195,19 +197,21 @@ class DocumentExporter:
         Generate a download link for a file
         """
         # Ensure filename is valid
-        filename = str(filename) if filename else "Simplified_document" 
+        filename = str(filename) if filename else "Simplified_document"
         filename = filename.replace(" ", "_")
-        
+
         # Ensure we have bytes (different encoding for PDF vs text)
         if not isinstance(file_bytes, bytes):
             if file_format == "pdf":
-                file_bytes = str(file_bytes).encode("latin-1")  # PDF binary data needs latin-1
+                file_bytes = str(file_bytes).encode(
+                    "latin-1")  # PDF binary data needs latin-1
             else:
-                file_bytes = str(file_bytes).encode("utf-8")  # Text data can use utf-8
-                
+                file_bytes = str(file_bytes).encode(
+                    "utf-8")  # Text data can use utf-8
+
         # Rest of the method remains the same
         b64 = base64.b64encode(file_bytes).decode()
-        
+
         # Map format to MIME type
         mime_types = {
             "pdf": "application/pdf",
@@ -215,7 +219,7 @@ class DocumentExporter:
             "txt": "text/plain"
         }
         mime_type = mime_types.get(file_format, "application/octet-stream")
-        
+
         href = f'<a href="data:{mime_type};base64,{b64}" download="{filename}.{file_format}">{display_text}</a>'
         return href
 
