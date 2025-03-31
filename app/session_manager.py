@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import datetime
 
 
 def initialize_session_state():
@@ -17,6 +18,10 @@ def initialize_session_state():
         st.session_state.show_delete_dialog = False
     if "entry_to_delete" not in st.session_state:
         st.session_state.entry_to_delete = None
+    if "show_export_options" not in st.session_state:
+        st.session_state.show_export_options = False
+    if "timestamp" not in st.session_state:
+        st.session_state.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def reset_session():
