@@ -3,12 +3,17 @@ import torch
 from functools import lru_cache
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from .formatter import format_messages
+import ollama
+import streamlit as st
+from utils.ollama_config import get_selected_model, OLLAMA_API_HOST, SYSTEM_TEMPLATE
 
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 local_model_path = "./DeepSeek-R1-Distill-Qwen-1.5B"
 
 # Cache Model Loading (Ensures it's loaded only once)
+
+
 @lru_cache(maxsize=1)
 def load_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -31,34 +36,97 @@ def load_model():
 
     return model, tokenizer, device
 
+
 # Load model & tokenizer once
 model, tokenizer, device = load_model()
 
-def simplify_document(user_input, max_new_tokens=1024):
-    """Simplifies a legal document using an optimized CUDA-based LLM."""
-    
-    system_message = (
-        "You are an expert in summarization and legal document simplification. Your task is to summarize the following agreement "
-        "in a way that is easy for a layperson to understand. The summary should include all key details while using simple, clear language "
-        "and relevant real-life examples where needed. Ensure that no critical information is lost.\n\n"
-        "Key requirements for the summary:\n\n"
-        "Use plain English, avoiding complex legal terms.\n"
-        "Provide relevant examples to make the agreement more understandable.\n"
-        "Maintain all important details, such as duration, termination clauses, liability, dispute resolution, and governing law.\n"
-        "Ensure the summary remains concise but does not miss crucial points."
-    )
 
-    messages = [
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": user_input}
-    ]
-    prompt = format_messages(messages)
-    
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+@st.cache_data(show_spinner=True)
+def simplify_document(user_input, max_tokens=4096):
+    """
+    Simplifies a legal document using Ollama.
 
-    with torch.inference_mode():
-        output = model.generate(**inputs, max_new_tokens=max_new_tokens)
+    Args:
+        user_input (str): The legal text to simplify
+        max_tokens (int): Maximum number of tokens for the response
 
-    generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+    Returns:
+        str: The simplified text
+    """
+    try:
+        # Get the selected model
+        model = get_selected_model()
 
-    return generated_text.split("Simplified version:")[-1].strip() if "Simplified version:" in generated_text else generated_text.strip()
+        # Set up the host
+        client = ollama.Client(host=OLLAMA_API_HOST)
+
+        # Generate simplified text using Ollama
+        response = client.chat(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": SYSTEM_TEMPLATE
+                },
+                {
+                    "role": "user",
+                    "content": user_input
+                }
+            ],
+            options={
+                "num_predict": max_tokens,
+                "temperature": 0.1  # Low temperature for more deterministic output
+            }
+        )
+
+        # Extract the simplified text from the response
+        simplified_text = response["message"]["content"]
+
+        return simplified_text
+
+    except Exception as e:
+        st.error(f"Error during simplification: {str(e)}")
+        # Return fallback message in case of error
+        return "Sorry, there was an error simplifying the document. Please try again."
+
+
+def check_model_availability():
+    """
+    Check if the selected Ollama model is available locally.
+    If not, provide download instructions.
+
+    Returns:
+        bool: True if model is available, False otherwise
+    """
+    try:
+        model = get_selected_model()
+        client = ollama.Client(host=OLLAMA_API_HOST)
+        models = client.list()
+
+        # Check if our model is in the list
+        available_models = [m["name"] for m in models["models"]]
+
+        if model in available_models:
+            return True
+        else:
+            st.warning(f"""
+            The model '{model}' is not available locally. 
+            To download it, open a terminal and run:
+            ```
+            ollama pull {model}
+            ```
+            """)
+            return False
+
+    except Exception as e:
+        st.error(f"""
+        Error connecting to Ollama: {str(e)}
+        
+        Please ensure Ollama is installed and running with:
+        ```
+        ollama serve
+        ```
+        
+        Visit https://ollama.com to install Ollama.
+        """)
+        return False

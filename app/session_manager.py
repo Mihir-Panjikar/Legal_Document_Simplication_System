@@ -17,6 +17,9 @@ def initialize_session_state():
         st.session_state.show_delete_dialog = False
     if "entry_to_delete" not in st.session_state:
         st.session_state.entry_to_delete = None
+    if "ollama_model" not in st.session_state:
+        from utils.ollama_config import DEFAULT_MODEL
+        st.session_state.ollama_model = DEFAULT_MODEL
 
 
 def reset_session():

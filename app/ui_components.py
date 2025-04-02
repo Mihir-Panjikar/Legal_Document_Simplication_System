@@ -2,6 +2,8 @@ import streamlit as st
 from app.session_manager import set_delete_dialog, reset_session
 from app.database_operations import load_history_entry, perform_delete
 from app.processors import process_simplification, process_translation
+from utils.ollama_config import AVAILABLE_MODELS, get_selected_model, set_selected_model
+from utils.Simplification import check_model_availability
 
 
 def render_delete_dialog(db):
@@ -21,24 +23,28 @@ def render_delete_dialog(db):
 
 def render_history_sidebar(db):
     """Render the history sidebar"""
-    st.subheader("History")
+    # First render model selection
+    render_model_selection()
+
+    # Then render history
+    st.sidebar.markdown("### History")
 
     # Get history entries
     history_entries = db.get_all_entries()
 
     if not history_entries:
-        st.info("No history yet. Start by simplifying a document.")
+        st.sidebar.info("No history yet. Start by simplifying a document.")
     else:
         # Add a "Clear All History" button at the top
-        if st.button("Clear All History", key="clear_all"):
+        if st.sidebar.button("Clear All History", key="clear_all"):
             # Ask for confirmation
             set_delete_dialog(True, "all")  # Special marker for all entries
 
         for entry in history_entries:
             entry_id, title, timestamp = entry
             # Create a container for each history item with buttons
-            with st.container():
-                cols = st.columns([3, 1])
+            with st.sidebar.container():
+                cols = st.sidebar.columns([3, 1])
                 with cols[0]:
                     if st.button(f"{title}", key=f"history_{entry_id}"):
                         load_history_entry(db, entry_id)
@@ -90,3 +96,59 @@ def render_output_area(db):
         st.markdown(
             f"### Translated Text ({st.session_state.selected_language}):")
         st.write(st.session_state.translated_text)
+
+
+def render_model_selection():
+    """Render a dropdown to select the Ollama model"""
+    st.sidebar.markdown("### Model Settings")
+
+    current_model = get_selected_model()
+    selected_model = st.sidebar.selectbox(
+        "Select Ollama Model:",
+        AVAILABLE_MODELS,
+        index=AVAILABLE_MODELS.index(
+            current_model) if current_model in AVAILABLE_MODELS else 0,
+        key="model_selector"
+    )
+
+    if selected_model != current_model:
+        set_selected_model(selected_model)
+        st.sidebar.success(f"Model changed to {selected_model}")
+
+    # Check if the selected model is available
+    st.sidebar.markdown("### Model Status")
+    if check_model_availability():
+        st.sidebar.success(f"Model '{selected_model}' is available ✓")
+    else:
+        st.sidebar.error(f"Model '{selected_model}' is not available ✗")
+
+    st.sidebar.divider()
+
+
+# Add this function to show in the about section or help
+def render_ollama_help():
+    """Render help information for Ollama setup"""
+    with st.expander("Ollama Setup Help"):
+        st.markdown("""
+        ### Setting Up Ollama
+        
+        This application uses Ollama to run AI models locally on your computer.
+        
+        #### Installation Steps:
+        
+        1. **Install Ollama** from [ollama.com](https://ollama.com)
+        2. **Start Ollama** by running `ollama serve` in your terminal
+        3. **Download a model** by running `ollama pull llama3` (or another model)
+        
+        #### Troubleshooting:
+        
+        - Make sure Ollama is running (`ollama serve`)
+        - Check model availability with `ollama list`
+        - For translation, larger models like llama3 perform better
+        
+        #### System Requirements:
+        
+        - At least 8GB RAM (16GB+ recommended)
+        - Modern CPU, GPU recommended for faster processing
+        - 10GB+ free disk space for model storage
+        """)

@@ -5,14 +5,16 @@ from app.ui_components import (
     render_delete_dialog,
     render_history_sidebar,
     render_input_area,
-    render_output_area
+    render_output_area,
+    render_ollama_help  # Add this import
 )
 
 
 def main():
     """Main application entry point"""
     # Page setup
-    st.set_page_config(page_title="Legal Document Simplifier", layout="wide")
+    st.set_page_config(
+        page_title="Legal Document Simplifier (Ollama)", layout="wide")
 
     # Initialize database
     db = get_database()
@@ -22,7 +24,7 @@ def main():
 
     # Set page title
     st.title("Legal Document Simplification System")
-    st.markdown("##### Please enter the legal text for simplification")
+    st.markdown("##### Using Ollama for local AI processing")
 
     # Create layout columns
     col1, col2 = st.columns([1, 3])
@@ -38,6 +40,10 @@ def main():
     with col2:
         render_input_area(db)
         render_output_area(db)
+
+        # Add Ollama help at the bottom
+        st.markdown("---")
+        render_ollama_help()
 
 
 if __name__ == "__main__":
