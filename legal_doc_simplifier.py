@@ -26,12 +26,12 @@ def main():
     st.title("Legal Document Simplification System")
     st.markdown("##### Using Ollama for local AI processing")
 
-    # Create layout columns
-    col1, col2 = st.columns([1, 3])
-
-    # Show delete confirmation dialog if needed
+    # Show delete confirmation dialog if needed - MOVED UP before any other UI components
     if st.session_state.show_delete_dialog:
         render_delete_dialog(db)
+
+    # Create layout columns
+    col1, col2 = st.columns([1, 3])
 
     # Render sidebar and main content
     with col1:

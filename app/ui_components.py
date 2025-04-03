@@ -7,8 +7,12 @@ from utils.Simplification import check_model_availability
 
 
 def render_delete_dialog(db):
-    """Render the delete confirmation dialog"""
-    with st.container():
+    """Render the delete confirmation dialog at the top of the screen"""
+    # Create a placeholder at the very top of the app
+    dialog_placeholder = st.empty()
+
+    # Use the placeholder to display the dialog
+    with dialog_placeholder.container():
         st.warning(
             "Are you sure you want to delete this history entry? This cannot be undone.")
         col1_dialog, col2_dialog = st.columns(2)
@@ -103,11 +107,53 @@ def render_output_area(db):
 
 def render_model_selection():
     """Render a dropdown to select the Ollama model"""
+    import requests
+    import json
+    from utils.ollama_config import OLLAMA_API_HOST
+
     st.sidebar.markdown("### Model Settings")
 
+    # Display available models first
+    st.sidebar.markdown("#### Available Models")
+
+    try:
+        # Get the list of available models from Ollama
+        api_host = OLLAMA_API_HOST.replace("http://", "")
+        response = requests.get(f"http://{api_host}/api/tags")
+
+        if response.status_code == 200:
+            data = response.json()
+            available_models_list = []
+
+            # Extract model names using the correct format
+            if "models" in data:
+                available_models_list = [m.get("name", str(m))
+                                         for m in data["models"] if isinstance(m, dict)]
+            elif isinstance(data, list):
+                available_models_list = [m.get("name", str(m))
+                                         for m in data if isinstance(m, dict)]
+
+            # Display the models
+            if available_models_list:
+                for model in available_models_list:
+                    st.sidebar.markdown(f"- {model}")
+            else:
+                st.sidebar.warning("No models available in Ollama")
+                st.sidebar.markdown("Run this command to add a model:")
+                st.sidebar.code("ollama pull <model-name>", language="bash")
+        else:
+            st.sidebar.warning("Could not fetch available models")
+
+    except Exception as e:
+        st.sidebar.warning("Could not connect to Ollama server")
+
+    st.sidebar.markdown("---")
+
+    # Then show model selection dropdown
+    st.sidebar.markdown("#### Select Model")
     current_model = get_selected_model()
     selected_model = st.sidebar.selectbox(
-        "Select Ollama Model:",
+        "Choose model:",
         AVAILABLE_MODELS,
         index=AVAILABLE_MODELS.index(
             current_model) if current_model in AVAILABLE_MODELS else 0,
@@ -169,14 +215,6 @@ def render_ollama_help():
                     models = [m.get("name", str(m))
                               for m in data if isinstance(m, dict)]
 
-                # Display models
-                if models:
-                    st.write("Available models:")
-                    for model in models:
-                        st.write(f"- {model}")
-                else:
-                    st.warning(
-                        "No models available. You need to pull a model.")
             else:
                 st.warning(
                     f"Ollama API returned status code: {response.status_code}")
@@ -202,7 +240,7 @@ def render_ollama_help():
 
         # Show command to pull models
         st.markdown("### Pull a model")
-        st.code("ollama pull llama3.2", language="bash")
+        st.code("ollama pull <model-name>", language="bash")
         st.markdown("After pulling the model, restart this application.")
 
     except Exception as e:

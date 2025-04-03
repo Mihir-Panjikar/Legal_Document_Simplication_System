@@ -2,7 +2,8 @@ import streamlit as st
 
 # Available Ollama models
 AVAILABLE_MODELS = [
-    "llama3.2",  # Add the new model
+    "deepseek-r1",
+    "llama3.2",
     "llama3",
     "mistral",
     "phi3",
@@ -12,7 +13,7 @@ AVAILABLE_MODELS = [
 ]
 
 # Default model to use
-DEFAULT_MODEL = "llama3.2"
+DEFAULT_MODEL = "deepseek-r1"
 
 # Ollama API endpoint (default is localhost)
 OLLAMA_API_HOST = "http://localhost:11434"
