@@ -58,9 +58,12 @@ def render_input_area(db):
     user_input = st.text_area(
         "Enter legal document text here:", height=300, value=st.session_state.input_text)
 
-    if st.button("Simplify"):
-        if process_simplification(db, user_input):
-            st.rerun()
+    # Before processing any document
+    if check_model_availability():
+        # Proceed with document simplification
+        if st.button("Simplify"):
+            if process_simplification(db, user_input):
+                st.rerun()
 
     # Add a button to clear the current session
     if st.session_state.input_text:
@@ -127,7 +130,104 @@ def render_model_selection():
 
 # Add this function to show in the about section or help
 def render_ollama_help():
-    """Render help information for Ollama setup"""
+    """Render help information for Ollama setup and status"""
+    st.subheader("Ollama Status")
+
+    try:
+        import ollama
+        import requests
+        import json
+        from utils.ollama_config import OLLAMA_API_HOST
+
+        # Try direct HTTP request first (more reliable)
+        try:
+            # Remove http:// if present for requests
+            api_host = OLLAMA_API_HOST.replace("http://", "")
+            response = requests.get(f"http://{api_host}/api/tags")
+
+            if response.status_code == 200:
+                st.success("✅ Connected to Ollama server successfully")
+
+                # Display raw response for debugging
+                with st.expander("Debug: API Response"):
+                    st.code(json.dumps(response.json(), indent=2))
+
+                # Extract models using the correct format
+                data = response.json()
+                models = []
+
+                # Handle different possible response formats
+                if "models" in data:
+                    # New format with "models" key
+                    models = [m.get("name", str(m))
+                              for m in data["models"] if isinstance(m, dict)]
+                elif "models" in data:
+                    # Legacy format
+                    models = data["models"]
+                elif isinstance(data, list):
+                    # Direct list response
+                    models = [m.get("name", str(m))
+                              for m in data if isinstance(m, dict)]
+
+                # Display models
+                if models:
+                    st.write("Available models:")
+                    for model in models:
+                        st.write(f"- {model}")
+                else:
+                    st.warning(
+                        "No models available. You need to pull a model.")
+            else:
+                st.warning(
+                    f"Ollama API returned status code: {response.status_code}")
+
+        except requests.exceptions.RequestException as req_error:
+            st.warning(f"HTTP request to Ollama failed: {str(req_error)}")
+
+            # Fall back to using the Python client
+            try:
+                client = ollama.Client(host=OLLAMA_API_HOST)
+                models_info = client.list()
+
+                # Display raw response
+                with st.expander("Debug: Python Client Response"):
+                    st.code(str(models_info))
+
+                st.success("✅ Connected to Ollama via Python client")
+                st.info(
+                    "Please check the debug information to see the response format")
+
+            except Exception as client_error:
+                st.error(f"Python client failed: {str(client_error)}")
+
+        # Show command to pull models
+        st.markdown("### Pull a model")
+        st.code("ollama pull llama3.2", language="bash")
+        st.markdown("After pulling the model, restart this application.")
+
+    except Exception as e:
+        st.error(f"Error connecting to Ollama: {str(e)}")
+        st.markdown("""
+        ### Troubleshooting Steps:
+        
+        1. **Install Ollama** if not already installed:
+           ```
+           curl -fsSL https://ollama.com/install.sh | sh
+           ```
+           
+        2. **Start Ollama** in a terminal:
+           ```
+           ollama serve
+           ```
+           
+        3. **Check connection**:
+           ```
+           curl http://localhost:11434/api/tags
+           ```
+           
+        4. **Restart the application** after Ollama is running
+        """)
+
     with st.expander("Ollama Setup Help"):
         st.markdown("""
         ### Setting Up Ollama

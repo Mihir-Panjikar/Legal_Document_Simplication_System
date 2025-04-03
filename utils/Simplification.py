@@ -1,44 +1,6 @@
-import os
-import torch
-from functools import lru_cache
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from .formatter import format_messages
 import ollama
 import streamlit as st
 from utils.ollama_config import get_selected_model, OLLAMA_API_HOST, SYSTEM_TEMPLATE
-
-os.environ["TRANSFORMERS_OFFLINE"] = "1"
-
-local_model_path = "./DeepSeek-R1-Distill-Qwen-1.5B"
-
-# Cache Model Loading (Ensures it's loaded only once)
-
-
-@lru_cache(maxsize=1)
-def load_model():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    quantization_config = BitsAndBytesConfig(
-        load_in_4bit=True,  # More efficient than 8-bit
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-        llm_int8_enable_fp32_cpu_offload=True  # Prevents CPU-GPU mismatch issues
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        local_model_path,
-        device_map="auto",  # Optimizes layer placement across CUDA devices
-        torch_dtype=torch.float16,
-        quantization_config=quantization_config
-    )
-
-    tokenizer = AutoTokenizer.from_pretrained(local_model_path)
-
-    return model, tokenizer, device
-
-
-# Load model & tokenizer once
-model, tokenizer, device = load_model()
 
 
 @st.cache_data(show_spinner=True)
@@ -99,23 +61,68 @@ def check_model_availability():
         bool: True if model is available, False otherwise
     """
     try:
+        import requests
         model = get_selected_model()
-        client = ollama.Client(host=OLLAMA_API_HOST)
-        models = client.list()
 
-        # Check if our model is in the list
-        available_models = [m["name"] for m in models["models"]]
+        # Get API host without http:// if present
+        api_host = OLLAMA_API_HOST.replace("http://", "")
 
-        if model in available_models:
-            return True
-        else:
-            st.warning(f"""
-            The model '{model}' is not available locally. 
-            To download it, open a terminal and run:
-            ```
-            ollama pull {model}
-            ```
-            """)
+        # Direct HTTP request (more reliable)
+        try:
+            response = requests.get(f"http://{api_host}/api/tags")
+
+            if response.status_code == 200:
+                data = response.json()
+
+                # Extract model names using different possible formats
+                available_models = []
+
+                # Format 1: "models" key with objects that have "name"
+                if "models" in data and isinstance(data["models"], list):
+                    for model_info in data["models"]:
+                        if isinstance(model_info, dict) and "name" in model_info:
+                            available_models.append(model_info["name"])
+
+                # Format 2: Direct list of model names
+                elif isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict) and "name" in item:
+                            available_models.append(item["name"])
+                        elif isinstance(item, str):
+                            available_models.append(item)
+
+                # Check if model is available
+                if model in available_models:
+                    return True
+                else:
+                    # Check if model without version tag is available
+                    base_model = model.split(":")[0] if ":" in model else model
+                    base_matches = [
+                        m for m in available_models if m.startswith(base_model)]
+
+                    if base_matches:
+                        st.info(
+                            f"Using available model variant: {base_matches[0]}")
+                        # Update the selected model to the available variant
+                        from utils.ollama_config import set_selected_model
+                        set_selected_model(base_matches[0])
+                        return True
+                    else:
+                        st.warning(f"""
+                        The model '{model}' is not available locally. 
+                        To download it, open a terminal and run:
+                        ```
+                        ollama pull {model}
+                        ```
+                        """)
+                        return False
+            else:
+                st.error(
+                    f"Ollama API returned status code: {response.status_code}")
+                return False
+
+        except requests.exceptions.RequestException as req_error:
+            st.error(f"HTTP request to Ollama failed: {str(req_error)}")
             return False
 
     except Exception as e:

@@ -2,7 +2,6 @@ accelerate==1.5.2
 altair==5.5.0
 anyio==4.9.0
 attrs==25.3.0
-bitsandbytes==0.45.4
 blinker==1.9.0
 cachetools==5.5.2
 certifi==2025.1.31
@@ -10,7 +9,7 @@ charset-normalizer==3.4.1
 click==8.1.8
 colorama==0.4.6
 filelock==3.18.0
-fsspec==2025.3.0
+fsspec==2024.12.0
 gitdb==4.0.12
 GitPython==3.1.44
 googletrans==4.0.2
