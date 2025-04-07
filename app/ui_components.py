@@ -4,7 +4,8 @@ from app.database_operations import load_history_entry, perform_delete
 from app.processors import process_simplification, process_translation
 from utils.ollama_config import AVAILABLE_MODELS, get_selected_model, set_selected_model
 from utils.Simplification import check_model_availability
-from utils.document_export import DocumentExporter
+from utils.file_extractor import extract_text_from_file
+# from utils.document_export import DocumentExporter
 from datetime import datetime
 
 
@@ -29,8 +30,6 @@ def render_delete_dialog(db):
 
 def render_history_sidebar(db):
     """Render the history sidebar"""
-    # First render model selection
-    render_model_selection()
 
     # Then render history
     st.sidebar.markdown("### History")
@@ -58,19 +57,79 @@ def render_history_sidebar(db):
                     if st.button("🗑️", key=f"delete_{entry_id}"):
                         set_delete_dialog(True, entry_id)
 
+    render_model_selection()
+
 
 def render_input_area(db):
-    """Render the input text area"""
-    user_input = st.text_area(
-        "Enter legal document text here:", height=300, value=st.session_state.input_text)
-
-    # Before processing any document
-    if check_model_availability():
-        # Proceed with document simplification
-        if st.button("Simplify"):
-            if process_simplification(db, user_input):
-                st.rerun()
-
+    """Render the input area with text input and simplification button"""
+    st.markdown("### Input Legal Document")
+    
+    # Add tabs for text input and file upload
+    input_tab, file_tab = st.tabs(["Text Input", "File Upload"])
+    
+    with input_tab:
+        # Existing text input functionality
+        user_input = st.text_area(
+            "Paste legal text here:",
+            value=st.session_state.input_text,
+            height=300,
+            placeholder="Enter or paste the legal document text here...",
+            key="text_input"
+        )
+        
+        # Update session state when input changes
+        if user_input != st.session_state.input_text:
+            st.session_state.input_text = user_input
+            
+    with file_tab:
+        # Add file uploader for document files
+        uploaded_file = st.file_uploader(
+            "Upload a legal document file:",
+            type=["txt", "docx", "pdf"],
+            key="file_uploader"
+        )
+        
+        # Extract text when file is uploaded
+        if uploaded_file is not None:
+            # Show a spinner while extracting text
+            with st.spinner(f"Extracting text from {uploaded_file.name}..."):
+                extracted_text = extract_text_from_file(uploaded_file)
+                
+                if extracted_text:
+                    st.success(f"Text extracted from {uploaded_file.name}")
+                    
+                    # Show preview with option to edit
+                    st.markdown("### Preview Extracted Text")
+                    edited_text = st.text_area(
+                        "Edit extracted text if needed:",
+                        value=extracted_text,
+                        height=300,
+                        key="extracted_text"
+                    )
+                    
+                    # Update session state with extracted/edited text
+                    if st.button("Use This Text", key="use_extracted"):
+                        st.session_state.input_text = edited_text
+                        st.rerun()
+    
+    # Only show simplify button if there's input text (from either source)
+    if st.session_state.input_text:
+        # Display title input if there's text
+        title = st.text_input(
+            "Document Title (optional):",
+            value=st.session_state.doc_title,
+            placeholder="Enter a title for this document",
+            key="title_input"
+        )
+        
+        if title != st.session_state.doc_title:
+            st.session_state.doc_title = title
+            
+        # Add button to simplify the text - FIX: Add user_input parameter
+        if st.button("Simplify Document", key="simplify_btn"):
+            if process_simplification(db, st.session_state.input_text):
+                st.success("Document simplified successfully!")
+    
     # Add a button to clear the current session
     if st.session_state.input_text:
         if st.button("New Document", key="new_doc"):
@@ -109,9 +168,9 @@ def render_output_area(db):
                         st.rerun()
 
         # Add export options
-        with col2:
-            if st.button("Export Document"):
-                st.session_state.show_export_options = True
+        # with col2:
+        #     if st.button("Export Document"):
+        #         st.session_state.show_export_options = True
 
     if st.session_state.translated_text:
         st.markdown(
@@ -119,70 +178,70 @@ def render_output_area(db):
         st.write(st.session_state.translated_text)
 
     # Show export options if the button was clicked
-    if st.session_state.get("show_export_options", False) and st.session_state.simplified_text:
-        render_export_options(db)
+    # if st.session_state.get("show_export_options", False) and st.session_state.simplified_text:
+    #     render_export_options(db)
 
 
-def render_export_options(db):
-    """Render export options"""
-    st.markdown("### Export Options")
+# def render_export_options(db):
+#     """Render export options"""
+#     st.markdown("### Export Options")
 
-    # Get the document data
-    entry_id = st.session_state.current_entry_id
-    if entry_id:
-        entry = db.get_entry(entry_id)
-        if entry:
-            # Map column indices to variables
-            id, input_text, simplified_text, translated_text, language, timestamp, title = entry
+#     # Get the document data
+#     entry_id = st.session_state.current_entry_id
+#     if entry_id:
+#         entry = db.get_entry(entry_id)
+#         if entry:
+#             # Map column indices to variables
+#             id, input_text, simplified_text, translated_text, language, timestamp, title = entry
 
-            # Create a title for the document
-            doc_title = title or "Legal Document"
+#             # Create a title for the document
+#             doc_title = title or "Legal Document"
 
-            # Create filename base
-            filename_base = doc_title.replace(" ", "_")[:30]
+#             # Create filename base
+#             filename_base = doc_title.replace(" ", "_")[:30]
 
-            # Export format selection
-            export_format = st.selectbox(
-                "Select Format:",
-                ["PDF", "Word Document", "Text File"],
-                key="export_format"
-            )
+#             # Export format selection
+#             export_format = st.selectbox(
+#                 "Select Format:",
+#                 ["PDF", "Word Document", "Text File"],
+#                 key="export_format"
+#             )
 
-            col1, col2, col3 = st.columns([1, 1, 1])
+#             col1, col2, col3 = st.columns([1, 1, 1])
 
-            with col1:
-                if st.button("PDF", key="export_pdf"):
-                    pdf_bytes = DocumentExporter.export_to_pdf(
-                        doc_title, input_text, simplified_text, translated_text, language
-                    )
-                    download_link = DocumentExporter.get_download_link(
-                        pdf_bytes, filename_base, "pdf", "Download PDF"
-                    )
-                    st.markdown(download_link, unsafe_allow_html=True)
+#             with col1:
+#                 if st.button("PDF", key="export_pdf"):
+#                     pdf_bytes = DocumentExporter.export_to_pdf(
+#                         doc_title, input_text, simplified_text, translated_text, language
+#                     )
+#                     download_link = DocumentExporter.get_download_link(
+#                         pdf_bytes, filename_base, "pdf", "Download PDF"
+#                     )
+#                     st.markdown(download_link, unsafe_allow_html=True)
 
-            with col2:
-                if st.button("Word", key="export_docx"):
-                    docx_bytes = DocumentExporter.export_to_docx(
-                        doc_title, input_text, simplified_text, translated_text, language
-                    )
-                    download_link = DocumentExporter.get_download_link(
-                        docx_bytes, filename_base, "docx", "Download Word"
-                    )
-                    st.markdown(download_link, unsafe_allow_html=True)
+#             with col2:
+#                 if st.button("Word", key="export_docx"):
+#                     docx_bytes = DocumentExporter.export_to_docx(
+#                         doc_title, input_text, simplified_text, translated_text, language
+#                     )
+#                     download_link = DocumentExporter.get_download_link(
+#                         docx_bytes, filename_base, "docx", "Download Word"
+#                     )
+#                     st.markdown(download_link, unsafe_allow_html=True)
 
-            with col3:
-                if st.button("Text", key="export_txt"):
-                    txt_bytes = DocumentExporter.export_to_txt(
-                        doc_title, input_text, simplified_text, translated_text, language
-                    )
-                    download_link = DocumentExporter.get_download_link(
-                        txt_bytes, filename_base, "txt", "Download Text"
-                    )
-                    st.markdown(download_link, unsafe_allow_html=True)
+#             with col3:
+#                 if st.button("Text", key="export_txt"):
+#                     txt_bytes = DocumentExporter.export_to_txt(
+#                         doc_title, input_text, simplified_text, translated_text, language
+#                     )
+#                     download_link = DocumentExporter.get_download_link(
+#                         txt_bytes, filename_base, "txt", "Download Text"
+#                     )
+#                     st.markdown(download_link, unsafe_allow_html=True)
 
-            if st.button("Close Export Options"):
-                st.session_state.show_export_options = False
-                st.rerun()
+#             if st.button("Close Export Options"):
+#                 st.session_state.show_export_options = False
+#                 st.rerun()
 
 
 def render_model_selection():
@@ -191,67 +250,77 @@ def render_model_selection():
     import json
     from utils.ollama_config import OLLAMA_API_HOST
 
-    st.sidebar.markdown("### Model Settings")
+    # Check if the "Advanced" button has been clicked
+    if "show_advanced" not in st.session_state:
+        st.session_state.show_advanced = False
 
-    # Display available models first
-    st.sidebar.markdown("#### Available Models")
+    # Add the "Advanced" button
+    if st.sidebar.button("Advanced"):
+        st.session_state.show_advanced = not st.session_state.show_advanced
 
-    try:
-        # Get the list of available models from Ollama
-        api_host = OLLAMA_API_HOST.replace("http://", "")
-        response = requests.get(f"http://{api_host}/api/tags")
+    # Render model selection only if "Advanced" is clicked
+    if st.session_state.show_advanced:
+        st.sidebar.markdown("### Model Settings")
 
-        if response.status_code == 200:
-            data = response.json()
-            available_models_list = []
+        # Display available models first
+        st.sidebar.markdown("#### Available Models")
 
-            # Extract model names using the correct format
-            if "models" in data:
-                available_models_list = [m.get("name", str(m))
-                                         for m in data["models"] if isinstance(m, dict)]
-            elif isinstance(data, list):
-                available_models_list = [m.get("name", str(m))
-                                         for m in data if isinstance(m, dict)]
+        try:
+            # Get the list of available models from Ollama
+            api_host = OLLAMA_API_HOST.replace("http://", "")
+            response = requests.get(f"http://{api_host}/api/tags")
 
-            # Display the models
-            if available_models_list:
-                for model in available_models_list:
-                    st.sidebar.markdown(f"- {model}")
+            if response.status_code == 200:
+                data = response.json()
+                available_models_list = []
+
+                # Extract model names using the correct format
+                if "models" in data:
+                    available_models_list = [m.get("name", str(m))
+                                             for m in data["models"] if isinstance(m, dict)]
+                elif isinstance(data, list):
+                    available_models_list = [m.get("name", str(m))
+                                             for m in data if isinstance(m, dict)]
+
+                # Display the models
+                if available_models_list:
+                    for model in available_models_list:
+                        st.sidebar.markdown(f"- {model}")
+                else:
+                    st.sidebar.warning("No models available in Ollama")
+                    st.sidebar.markdown("Run this command to add a model:")
+                    st.sidebar.code("ollama pull <model-name>", language="bash")
             else:
-                st.sidebar.warning("No models available in Ollama")
-                st.sidebar.markdown("Run this command to add a model:")
-                st.sidebar.code("ollama pull <model-name>", language="bash")
+                st.sidebar.warning("Could not fetch available models")
+
+        except Exception as e:
+            st.sidebar.warning("Could not connect to Ollama server")
+
+        st.sidebar.markdown("---")
+
+        # Then show model selection dropdown
+        st.sidebar.markdown("#### Select Model")
+        current_model = get_selected_model()
+        selected_model = st.sidebar.selectbox(
+            "Choose model:",
+            AVAILABLE_MODELS,
+            index=AVAILABLE_MODELS.index(
+                current_model) if current_model in AVAILABLE_MODELS else 0,
+            key="model_selector"
+        )
+
+        if selected_model != current_model:
+            set_selected_model(selected_model)
+            st.sidebar.success(f"Model changed to {selected_model}")
+
+        # Check if the selected model is available
+        st.sidebar.markdown("### Model Status")
+        if check_model_availability():
+            st.sidebar.success(f"Model '{selected_model}' is available ✓")
         else:
-            st.sidebar.warning("Could not fetch available models")
+            st.sidebar.error(f"Model '{selected_model}' is not available ✗")
 
-    except Exception as e:
-        st.sidebar.warning("Could not connect to Ollama server")
-
-    st.sidebar.markdown("---")
-
-    # Then show model selection dropdown
-    st.sidebar.markdown("#### Select Model")
-    current_model = get_selected_model()
-    selected_model = st.sidebar.selectbox(
-        "Choose model:",
-        AVAILABLE_MODELS,
-        index=AVAILABLE_MODELS.index(
-            current_model) if current_model in AVAILABLE_MODELS else 0,
-        key="model_selector"
-    )
-
-    if selected_model != current_model:
-        set_selected_model(selected_model)
-        st.sidebar.success(f"Model changed to {selected_model}")
-
-    # Check if the selected model is available
-    st.sidebar.markdown("### Model Status")
-    if check_model_availability():
-        st.sidebar.success(f"Model '{selected_model}' is available ✓")
-    else:
-        st.sidebar.error(f"Model '{selected_model}' is not available ✗")
-
-    st.sidebar.divider()
+        st.sidebar.divider()
 
 
 # Add this function to show in the about section or help

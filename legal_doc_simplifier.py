@@ -6,7 +6,6 @@ from app.ui_components import (
     render_history_sidebar,
     render_input_area,
     render_output_area,
-    render_ollama_help  # Add this import
 )
 
 
@@ -40,10 +39,6 @@ def main():
     with col2:
         render_input_area(db)
         render_output_area(db)
-
-        # Add Ollama help at the bottom
-        st.markdown("---")
-        render_ollama_help()
 
 
 if __name__ == "__main__":
