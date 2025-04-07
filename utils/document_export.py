@@ -3,6 +3,7 @@ import base64
 from fpdf import FPDF
 from docx import Document
 import tempfile
+from pathlib import Path
 import streamlit as st
 
 
@@ -12,21 +13,11 @@ class DocumentExporter:
     @staticmethod
     def export_to_pdf(title, original_text, simplified_text, translated_text=None, language=None):
         """
-        Export document content to PDF with Unicode support
-
-        Args:
-            title: Document title (will be converted to string)
-            original_text: Original legal text (will be converted to string)
-            simplified_text: Simplified text (will be converted to string)
-            translated_text: Optional translated text (will be converted to string)
-            language: Translation language if applicable (will be converted to string)
-
-        Returns:
-            bytes: PDF file as bytes
-
-        Raises:
-            Exception: If PDF generation fails
+        Export document content to PDF with Unicode support using fpdf2
         """
+
+        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "ArialUnicode.ttf"
+
         # Input validation
         if title is None:
             title = "Untitled"
@@ -35,85 +26,66 @@ class DocumentExporter:
         if simplified_text is None:
             simplified_text = ""
 
-        # Add this function to sanitize text
-        def sanitize_text(text):
-            """Replace Unicode characters with ASCII equivalents"""
-            if text is None:
-                return ""
-            # Convert to string first
-            text = str(text)
-            # Replace common Unicode characters
-            replacements = {
-                '\u201c': '"',  # Left double quote
-                '\u201d': '"',  # Right double quote
-                '\u2018': "'",  # Left single quote
-                '\u2019': "'",  # Right single quote
-                '\u2013': '-',  # En dash
-                '\u2014': '--', # Em dash
-                '\u2026': '...', # Ellipsis
-                '\u00a0': ' ',  # Non-breaking space
-                # Add more replacements as needed
-            }
-            for unicode_char, ascii_char in replacements.items():
-                text = text.replace(unicode_char, ascii_char)
-            return text
-
-        # Sanitize all text inputs
-        title = sanitize_text(title)
-        original_text = sanitize_text(original_text)
-        simplified_text = sanitize_text(simplified_text)
-        if translated_text is not None:
-            translated_text = sanitize_text(translated_text)
-
         # Create a PDF with fpdf2
-        pdf = FPDF()
+        pdf = FPDF(orientation='P', unit='mm', format='A4')
+        # Set margins
+        pdf.set_margins(20, 20, 20)
         pdf.add_page()
-        pdf.set_font("Helvetica", size=16)
-
-        # Process text safely by ensuring string conversion
+        
+        pdf.add_font("ArialUnicode", "",str(FONT_PATH) , uni=True)
+        
+        # With fpdf2, we can directly work with Unicode text
+        # No need for the sanitize_text function
+        
+        # Process text blocks with better fpdf2 features
         def process_text_block(text, header):
-            pdf.set_font("Helvetica", style="B", size=12)
-            # Updated to fpdf2 syntax
-            pdf.cell(0, 10, str(header), new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("Helvetica", size=10)
-
-            # Convert text to string and handle line breaks
-            text_str = str(text) if text is not None else ""
-            for line in text_str.split('\n'):
-                while len(line) > 0:
-                    chunk = line[:100]
-                    line = line[100:]
-                    # Updated to fpdf2 syntax
-                    pdf.multi_cell(0, 5, str(chunk), new_x="LMARGIN", new_y="NEXT")
-
-        # Title - updated to fpdf2 syntax
-        pdf.cell(0, 10, "Legal Document Simplification", align="C", 
-                new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", size=12)
-
-        # Fix Unicode issues in title and ensure string
-        safe_title = str(title)[:50] if title else "Untitled"
-        pdf.cell(0, 10, f"Document: {safe_title}", new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(5)
-
+            # Add header with fpdf2 positioning
+            pdf.set_font("ArialUnicode", size=12)
+            pdf.cell(w=0, h=10, text=header, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("ArialUnicode", size=10)
+            
+            # Safety check
+            if text is None:
+                return
+                
+            # With fpdf2, we can use multi_cell more effectively
+            paragraphs = str(text).split('\n')
+            for paragraph in paragraphs:
+                if paragraph.strip():  # Skip empty paragraphs
+                    pdf.multi_cell(w=0, h=5, text=paragraph)
+                    pdf.ln(2)  # Small space after paragraph
+        
+        # Document header
+        pdf.set_font("ArialUnicode", size=16)
+        pdf.cell(w=0, h=10, text="Legal Document Simplification", 
+                 align="C", new_x="LMARGIN", new_y="NEXT")
+        
+        # Document title
+        pdf.set_font("ArialUnicode", size=12)
+        safe_title = str(title)[:40] if title else "Untitled"
+        pdf.cell(w=0, h=10, text=f"Document: {safe_title}", 
+                 new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(5)  # Space after title
+        
         # Process each text block
         process_text_block(original_text, "Original Text:")
         pdf.ln(5)
         process_text_block(simplified_text, "Simplified Text:")
-
-        # Handle translated text if available
+        
+        # Handle translated text
         if translated_text and language:
             pdf.ln(5)
-            process_text_block(translated_text, f"Translated Text ({str(language)}):")
-
-        # Add timestamp with safe string conversion
-        pdf.ln(10)
-        pdf.set_font("Helvetica", size=8)
+            process_text_block(translated_text, f"Translated Text ({language}):")
+        
+        # Add timestamp
+        pdf.ln(5)
+        pdf.set_font("ArialUnicode", size=8)
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
-        pdf.cell(0, 5, f"Generated on: {timestamp}", new_x="LMARGIN", new_y="NEXT")
-
-        # Return PDF as bytes - fpdf2 handles encoding properly
-        return pdf.output()
+        pdf.cell(w=0, h=5, text=f"Generated on: {timestamp}", 
+                 new_x="LMARGIN", new_y="NEXT")
+        
+        # With fpdf2, we can directly return bytes
+        return pdf.output(dest='bytes').decode('latin-1')
 
     @staticmethod
     def export_to_docx(title, original_text, simplified_text, translated_text=None, language=None):
@@ -127,7 +99,7 @@ class DocumentExporter:
             original_text = ""
         if simplified_text is None:
             simplified_text = ""
-        
+
         # Convert all inputs to strings
         title = str(title)
         original_text = str(original_text)
@@ -136,7 +108,7 @@ class DocumentExporter:
             translated_text = str(translated_text)
         if language is not None:
             language = str(language)
-        
+
         doc = Document()
 
         # Add title
@@ -184,7 +156,7 @@ class DocumentExporter:
             original_text = ""
         if simplified_text is None:
             simplified_text = ""
-        
+
         # Convert all inputs to strings
         title = str(title)
         original_text = str(original_text)
@@ -193,7 +165,7 @@ class DocumentExporter:
             translated_text = str(translated_text)
         if language is not None:
             language = str(language)
-        
+
         content = []
         content.append("LEGAL DOCUMENT SIMPLIFICATION")
         content.append(f"Document: {title}\n")
@@ -221,23 +193,21 @@ class DocumentExporter:
     def get_download_link(file_bytes, filename, file_format, display_text):
         """
         Generate a download link for a file
-
-        Args:
-            file_bytes: File content as bytes
-            filename: Name of the file
-            file_format: Format/extension of the file
-            display_text: Text to display for the download link
-
-        Returns:
-            str: HTML for download link
         """
-        # Ensure all inputs are strings
-        filename = str(filename) if filename is not None else "document"
-        file_format = str(file_format) if file_format is not None else "txt"
-        display_text = str(display_text) if display_text is not None else "Download"
+        # Ensure filename is valid
+        filename = str(filename) if filename else "Simplified_document" 
+        filename = filename.replace(" ", "_")
         
+        # Ensure we have bytes (different encoding for PDF vs text)
+        if not isinstance(file_bytes, bytes):
+            if file_format == "pdf":
+                file_bytes = str(file_bytes).encode("latin-1")  # PDF binary data needs latin-1
+            else:
+                file_bytes = str(file_bytes).encode("utf-8")  # Text data can use utf-8
+                
+        # Rest of the method remains the same
         b64 = base64.b64encode(file_bytes).decode()
-
+        
         # Map format to MIME type
         mime_types = {
             "pdf": "application/pdf",
@@ -245,6 +215,51 @@ class DocumentExporter:
             "txt": "text/plain"
         }
         mime_type = mime_types.get(file_format, "application/octet-stream")
-
+        
         href = f'<a href="data:{mime_type};base64,{b64}" download="{filename}.{file_format}">{display_text}</a>'
         return href
+
+    @staticmethod
+    def render_export_options(title, original_text, simplified_text, translated_text=None, language=None):
+        """Render export options in the Streamlit UI"""
+        st.markdown("### Export Document")
+
+        # Create filename base
+        filename_base = title.replace(
+            " ", "_")[:30] if title else "Legal_Document"
+
+        # Export format selection
+        export_format = st.selectbox(
+            "Select Format:",
+            ["", "PDF", "Word Document", "Text File"],
+            key="export_format"
+        )
+
+        # Only show download button if format is selected
+        if export_format:
+            if export_format == "PDF":
+                pdf_bytes = DocumentExporter.export_to_pdf(
+                    title, original_text, simplified_text, translated_text, language
+                )
+                download_link = DocumentExporter.get_download_link(
+                    pdf_bytes, filename_base, "pdf", "Download PDF"
+                )
+                st.markdown(download_link, unsafe_allow_html=True)
+
+            elif export_format == "Word Document":
+                docx_bytes = DocumentExporter.export_to_docx(
+                    title, original_text, simplified_text, translated_text, language
+                )
+                download_link = DocumentExporter.get_download_link(
+                    docx_bytes, filename_base, "docx", "Download Word"
+                )
+                st.markdown(download_link, unsafe_allow_html=True)
+
+            elif export_format == "Text File":
+                txt_bytes = DocumentExporter.export_to_txt(
+                    title, original_text, simplified_text, translated_text, language
+                )
+                download_link = DocumentExporter.get_download_link(
+                    txt_bytes, filename_base, "txt", "Download Text"
+                )
+                st.markdown(download_link, unsafe_allow_html=True)
