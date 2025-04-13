@@ -187,10 +187,10 @@ def render_output_area(db):
         # Show export options
         DocumentExporter.render_export_options(
             title,
-            st.session_state.get('input_text', ''),  # <-- Change 'original_text' to 'input_text'
+            st.session_state.get('input_text', ''),
             st.session_state.get('simplified_text', ''),
             st.session_state.get('translated_text'),
-            st.session_state.get('target_language')
+            st.session_state.get('selected_language')
         )
 
     # # Show export options if the button was clicked
