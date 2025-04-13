@@ -1,0 +1,56 @@
+
+version: "3"
+
+services:
+  app:
+    build: .
+    container_name: legal-doc-simplifier
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./assets:/app/assets
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_API_HOST=http://ollama:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://ollama:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        reservations:
+          memory: "2G"
+        limits:
+          memory: "4G"
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-service
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_MODELS=/root/.ollama/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Mac-specific performance tuning
+    deploy:
+      resources:
+        reservations:
+          memory: "4G"
+        limits:
+          memory: "8G"
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+

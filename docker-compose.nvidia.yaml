@@ -1,0 +1,46 @@
+
+services:
+  app:
+    build: .
+    container_name: legal-doc-simplifier
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./assets:/app/assets
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_API_HOST=http://ollama:11434
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: '4G'
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-service
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+        limits:
+          cpus: '0.00'  # No CPU limit to use maximum available
+          memory: '16G'   # Adjust based on your system RAM
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - OLLAMA_NUM_THREADS=0  # Use all available CPU threads
+      - OLLAMA_MODEL_PATH=/root/.ollama/models
+      - OLLAMA_KEEP_ALIVE=5m
+
+volumes:
+  ollama_data:
