@@ -1,66 +1,45 @@
-import os
 import streamlit as st
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from app.session_manager import initialize_session_state
+from app.database_operations import get_database
+from app.ui_components import (
+    render_delete_dialog,
+    render_history_sidebar,
+    render_input_area,
+    render_output_area,
+)
 
-# Use MPS backend
-device = "mps" if torch.backends.mps.is_available() else "cpu"
 
-# Setup: local model loading
-os.environ["TRANSFORMERS_OFFLINE"] = "1"  # Prevents downloading from Hugging Face
-local_model_path = "./DeepSeek-R1-Distill-Qwen-1.5B" 
+def main():
+    """Main application entry point"""
+    # Page setup
+    st.set_page_config(
+        page_title="Legal Document Simplifier (Ollama)", layout="wide")
 
-# Load model and tokenizer
-model = AutoModelForCausalLM.from_pretrained(
-    local_model_path,
-    use_safetensors=True
-).to(device)
+    # Initialize database
+    db = get_database()
 
-tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+    # Initialize session state
+    initialize_session_state()
 
-model = torch.compile(model)
+    # Set page title
+    st.title("Legal Document Simplification System")
+    st.markdown("##### Using Ollama for local AI processing")
 
-# Function to Format the Input Messages
-def format_messages(messages):
-    return "\n\n".join(f"{msg['role'].capitalize()}: {msg['content']}" for msg in messages)
+    # Show delete confirmation dialog if needed - MOVED UP before any other UI components
+    if st.session_state.show_delete_dialog:
+        render_delete_dialog(db)
 
-# Function to Simplify the Legal Document Text
-def simplify_document(user_input, max_new_tokens=1024):
-    system_message = (
-        "You are an expert in summarization and legal document simplification. Your task is to summarize the following agreement "
-        "in a way that is easy for a layperson to understand. The summary should include all key details while using simple, clear language "
-        "and relevant real-life examples where needed. Ensure that no critical information is lost.\n\n"
-    )
+    # Create layout columns
+    col1, col2 = st.columns([1, 3])
 
-    messages = [
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": user_input}
-    ]
+    # Render sidebar and main content
+    with col1:
+        render_history_sidebar(db)
 
-    prompt = format_messages(messages)
+    with col2:
+        render_input_area(db)
+        render_output_area(db)
 
-    # Tokenize and move to device
-    inputs = tokenizer(prompt, return_tensors="pt").to(device)
 
-    # Generate output
-    with torch.no_grad():
-        output = model.generate(**inputs, max_new_tokens=max_new_tokens)
-
-    return tokenizer.decode(output[0], skip_special_tokens=True)
-
-# Streamlit UI
-st.set_page_config(page_title="Legal Document Simplifier", layout="wide")
-st.title("Legal Document Simplification System")
-st.markdown("##### Enter legal text for simplification")
-
-# User input
-user_input = st.text_area("Enter legal document text:", height=300)
-
-if st.button("Simplify"):
-    if user_input.strip():
-        with st.spinner("Simplifying..."):
-            result = simplify_document(user_input)
-        st.markdown("### Simplified Text:")
-        st.write(result)
-    else:
-        st.error("Please enter some text.")
+if __name__ == "__main__":
+    main()

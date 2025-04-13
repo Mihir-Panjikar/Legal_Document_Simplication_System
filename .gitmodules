@@ -1,9 +1,0 @@
-[submodule "gpt2"]
-	path = gpt2
-	url = https://huggingface.co/openai-community/gpt2
-[submodule "InLegalBERT"]
-	path = InLegalBERT
-	url = https://huggingface.co/law-ai/InLegalBERT
-[submodule "DeepSeek-R1-Distill-Qwen-1.5B"]
-	path = DeepSeek-R1-Distill-Qwen-1.5B
-	url = https://huggingface.co/DeepSeek-R1-Distill-Qwen-1.5B
