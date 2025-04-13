@@ -150,7 +150,6 @@ Legal_Document_Simplication_System/
 │   ├── database.py
 │   ├── document_export.py
 │   ├── file_extractor.py
-│   ├── formatter.py
 │   ├── ollama_config.py
 │   ├── Simplification.py
 │   └── translation.py

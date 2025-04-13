@@ -1,7 +1,7 @@
 import streamlit as st
 import asyncio
 from utils.Simplification import simplify_document
-from utils.translation import translate_text
+from utils.translation import translate_text, translate_with_retries
 
 
 def process_simplification(db, user_input):
@@ -34,18 +34,26 @@ def process_simplification(db, user_input):
 def process_translation(db, lang_code, language):
     """Process the translation of simplified text"""
     with st.spinner(f"Translating to {language}..."):
-        translated_text = asyncio.run(
-            translate_text(
-                st.session_state.simplified_text, src="en", dest=lang_code)
+        # Replace the async call with the retry-enabled version
+        translated_text = translate_with_retries(
+            st.session_state.simplified_text,
+            lang_code,
+            max_retries=5,  # Increase retries for Docker environment
+            retry_delay=3   # Start with longer delays
         )
-        st.session_state.translated_text = translated_text
-        st.session_state.selected_language = language
 
-        # Update in database
-        if st.session_state.current_entry_id:
-            db.update_entry(
-                st.session_state.current_entry_id,
-                translated_text=translated_text,
-                language=language
-            )
-        return True
+        if translated_text:  # Check if translation was successful
+            st.session_state.translated_text = translated_text
+            st.session_state.selected_language = language
+
+            # Update in database
+            if st.session_state.current_entry_id:
+                db.update_entry(
+                    st.session_state.current_entry_id,
+                    translated_text=translated_text,
+                    language=language
+                )
+            return True
+        else:
+            st.error("Translation failed. Please try again later.")
+            return False
