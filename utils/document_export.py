@@ -80,8 +80,9 @@ class DocumentExporter:
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
         pdf.cell(0, 5, f"Generated on: {timestamp}", ln=1)
         
-        # Return PDF as bytes (explicitly specify dest='bytes' for fpdf2)
-        return pdf.output(dest='bytes')
+        # Return PDF as bytes (fpdf2 returns bytearray, convert to bytes)
+        pdf_output = pdf.output(dest='bytes')
+        return bytes(pdf_output) if isinstance(pdf_output, bytearray) else pdf_output
 
     @staticmethod
     def export_to_docx(title, original_text, simplified_text, translated_text=None, language=None):
@@ -193,6 +194,10 @@ class DocumentExporter:
         # Ensure filename is valid
         filename = str(filename) if filename else "Simplified_document" 
         filename = filename.replace(" ", "_")
+        
+        # Handle bytearray (fpdf2 can return bytearray instead of bytes)
+        if isinstance(file_bytes, bytearray):
+            file_bytes = bytes(file_bytes)
         
         # Ensure we have bytes - be careful not to corrupt binary data
         if not isinstance(file_bytes, bytes):
