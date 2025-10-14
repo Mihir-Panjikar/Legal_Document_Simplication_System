@@ -61,7 +61,9 @@ class DocumentExporter:
             for paragraph in paragraphs:
                 if paragraph.strip():  # Skip empty paragraphs
                     clean_para = paragraph.strip()
-                    pdf.multi_cell(0, 5, clean_para)
+                    # Use larger line height (10) to prevent breaking Hindi/Devanagari characters
+                    # The previous value (5) was causing diacritical marks to split onto new lines
+                    pdf.multi_cell(0, 10, clean_para)
                     pdf.ln(2)  # Small space after paragraph
         
         # Document header
