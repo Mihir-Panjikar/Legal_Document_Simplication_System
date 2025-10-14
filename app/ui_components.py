@@ -2,8 +2,6 @@ import streamlit as st
 from app.session_manager import set_delete_dialog, reset_session
 from app.database_operations import load_history_entry, perform_delete
 from app.processors import process_simplification, process_translation
-from utils.ollama_config import AVAILABLE_MODELS, get_selected_model, set_selected_model
-from utils.Simplification import check_model_availability
 from utils.file_extractor import extract_text_from_file
 from utils.document_export import DocumentExporter
 from datetime import datetime
@@ -216,13 +214,6 @@ def render_export_options(db):
             # Create filename base
             filename_base = doc_title.replace(" ", "_")[:30]
 
-            # Export format selection
-            export_format = st.selectbox(
-                "Select Format:",
-                ["PDF", "Word Document", "Text File"],
-                key="export_format"
-            )
-
             col1, col2, col3 = st.columns([1, 1, 1])
 
             with col1:
@@ -261,10 +252,9 @@ def render_export_options(db):
 
 
 def render_model_selection():
-    """Render a dropdown to select the Ollama model"""
-    import requests
-    import json
-    from utils.ollama_config import OLLAMA_API_HOST
+    """Render a dropdown to select the Groq model"""
+    from utils.groq_config import AVAILABLE_GROQ_MODELS, get_selected_groq_model, set_selected_groq_model
+    from utils.groq_inference import check_groq_connection
 
     # Check if the "Advanced" button has been clicked
     if "show_advanced" not in st.session_state:
@@ -278,180 +268,61 @@ def render_model_selection():
     if st.session_state.show_advanced:
         st.sidebar.markdown("### Model Settings")
 
-        # Display available models first
-        st.sidebar.markdown("#### Available Models")
-
-        try:
-            # Get the list of available models from Ollama
-            api_host = OLLAMA_API_HOST.replace("http://", "")
-            response = requests.get(f"http://{api_host}/api/tags")
-
-            if response.status_code == 200:
-                data = response.json()
-                available_models_list = []
-
-                # Extract model names using the correct format
-                if "models" in data:
-                    available_models_list = [m.get("name", str(m))
-                                             for m in data["models"] if isinstance(m, dict)]
-                elif isinstance(data, list):
-                    available_models_list = [m.get("name", str(m))
-                                             for m in data if isinstance(m, dict)]
-
-                # Display the models
-                if available_models_list:
-                    for model in available_models_list:
-                        st.sidebar.markdown(f"- {model}")
-                else:
-                    st.sidebar.warning("No models available in Ollama")
-                    st.sidebar.markdown("Run this command to add a model:")
-                    st.sidebar.code("ollama pull <model-name>", language="bash")
-            else:
-                st.sidebar.warning("Could not fetch available models")
-
-        except Exception as e:
-            st.sidebar.warning("Could not connect to Ollama server")
+        # Display available Groq models
+        st.sidebar.markdown("#### Available Groq Models")
+        for model_id, model_info in AVAILABLE_GROQ_MODELS.items():
+            st.sidebar.markdown(f"- **{model_info['name']}** ({model_id})")
+            st.sidebar.markdown(f"  {model_info['description']}")
 
         st.sidebar.markdown("---")
 
         # Then show model selection dropdown
         st.sidebar.markdown("#### Select Model")
-        current_model = get_selected_model()
-        selected_model = st.sidebar.selectbox(
+        current_model = get_selected_groq_model()
+        model_list = list(AVAILABLE_GROQ_MODELS.keys())
+        
+        # Create display names for the selectbox
+        model_options = [f"{AVAILABLE_GROQ_MODELS[m]['name']} ({m})" for m in model_list]
+        current_index = model_list.index(current_model) if current_model in model_list else 0
+        
+        selected_option = st.sidebar.selectbox(
             "Choose model:",
-            AVAILABLE_MODELS,
-            index=AVAILABLE_MODELS.index(
-                current_model) if current_model in AVAILABLE_MODELS else 0,
+            model_options,
+            index=current_index,
             key="model_selector"
         )
+        
+        # Extract the model ID from the selected option
+        selected_model = model_list[model_options.index(selected_option)]
 
         if selected_model != current_model:
-            set_selected_model(selected_model)
+            set_selected_groq_model(selected_model)
             st.sidebar.success(f"Model changed to {selected_model}")
 
-        # Check if the selected model is available
-        st.sidebar.markdown("### Model Status")
-        if check_model_availability():
-            st.sidebar.success(f"Model '{selected_model}' is available ✓")
+        # Check Groq API status
+        st.sidebar.markdown("### API Status")
+        if check_groq_connection():
+            st.sidebar.success("Groq API connected ✓")
         else:
-            st.sidebar.error(f"Model '{selected_model}' is not available ✗")
+            st.sidebar.error("Groq API not available ✗")
 
         st.sidebar.divider()
 
 
 # Add this function to show in the about section or help
-def render_ollama_help():
-    """Render help information for Ollama setup and status"""
-    st.subheader("Ollama Status")
+def render_groq_help():
+    """Render help information for Groq API setup and status"""
+    st.subheader("Groq API Status")
 
     try:
-        import ollama
-        import requests
-        import json
-        from utils.ollama_config import OLLAMA_API_HOST
-
-        # Try direct HTTP request first (more reliable)
-        try:
-            # Remove http:// if present for requests
-            api_host = OLLAMA_API_HOST.replace("http://", "")
-            response = requests.get(f"http://{api_host}/api/tags")
-
-            if response.status_code == 200:
-                st.success("✅ Connected to Ollama server successfully")
-
-                # Display raw response for debugging
-                with st.expander("Debug: API Response"):
-                    st.code(json.dumps(response.json(), indent=2))
-
-                # Extract models using the correct format
-                data = response.json()
-                models = []
-
-                # Handle different possible response formats
-                if "models" in data:
-                    # New format with "models" key
-                    models = [m.get("name", str(m))
-                              for m in data["models"] if isinstance(m, dict)]
-                elif "models" in data:
-                    # Legacy format
-                    models = data["models"]
-                elif isinstance(data, list):
-                    # Direct list response
-                    models = [m.get("name", str(m))
-                              for m in data if isinstance(m, dict)]
-
-            else:
-                st.warning(
-                    f"Ollama API returned status code: {response.status_code}")
-
-        except requests.exceptions.RequestException as req_error:
-            st.warning(f"HTTP request to Ollama failed: {str(req_error)}")
-
-            # Fall back to using the Python client
-            try:
-                client = ollama.Client(host=OLLAMA_API_HOST)
-                models_info = client.list()
-
-                # Display raw response
-                with st.expander("Debug: Python Client Response"):
-                    st.code(str(models_info))
-
-                st.success("✅ Connected to Ollama via Python client")
-                st.info(
-                    "Please check the debug information to see the response format")
-
-            except Exception as client_error:
-                st.error(f"Python client failed: {str(client_error)}")
-
-        # Show command to pull models
-        st.markdown("### Pull a model")
-        st.code("ollama pull <model-name>", language="bash")
-        st.markdown("After pulling the model, restart this application.")
+        from utils.groq_inference import check_groq_connection
+        
+        if check_groq_connection():
+            st.success("✅ Connected to Groq API successfully")
+            st.info("You can now simplify and translate legal documents using Groq's cloud models.")
+        else:
+            st.error("❌ Unable to connect to Groq API")
 
     except Exception as e:
-        st.error(f"Error connecting to Ollama: {str(e)}")
-        st.markdown("""
-        ### Troubleshooting Steps:
-        
-        1. **Install Ollama** if not already installed:
-           ```
-           curl -fsSL https://ollama.com/install.sh | sh
-           ```
-           
-        2. **Start Ollama** in a terminal:
-           ```
-           ollama serve
-           ```
-           
-        3. **Check connection**:
-           ```
-           curl http://localhost:11434/api/tags
-           ```
-           
-        4. **Restart the application** after Ollama is running
-        """)
+        st.error(f"Error checking Groq API: {str(e)}")
 
-    with st.expander("Ollama Setup Help"):
-        st.markdown("""
-        ### Setting Up Ollama
-        
-        This application uses Ollama to run AI models locally on your computer.
-        
-        #### Installation Steps:
-        
-        1. **Install Ollama** from [ollama.com](https://ollama.com)
-        2. **Start Ollama** by running `ollama serve` in your terminal
-        3. **Download a model** by running `ollama pull llama3` (or another model)
-        
-        #### Troubleshooting:
-        
-        - Make sure Ollama is running (`ollama serve`)
-        - Check model availability with `ollama list`
-        - For translation, larger models like llama3 perform better
-        
-        #### System Requirements:
-        
-        - At least 8GB RAM (16GB+ recommended)
-        - Modern CPU, GPU recommended for faster processing
-        - 10GB+ free disk space for model storage
-        """)
