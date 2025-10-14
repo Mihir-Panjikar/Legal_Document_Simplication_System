@@ -13,12 +13,13 @@ def load_history_entry(db, entry_id):
     entry = db.get_entry(entry_id)
     if entry:
         # Map column indices to variables
-        id, input_text, simplified_text, translated_text, language, timestamp, title = entry
+        entry_id, input_text, simplified_text, translated_text, language, timestamp, title = entry
         st.session_state.input_text = input_text
         st.session_state.simplified_text = simplified_text or ""
         st.session_state.translated_text = translated_text or ""
-        st.session_state.current_entry_id = id
+        st.session_state.current_entry_id = entry_id
         st.session_state.selected_language = language or "None"
+        st.session_state.doc_title = title or ""
 
 
 def perform_delete(db):

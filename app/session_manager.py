@@ -38,6 +38,7 @@ def reset_session():
     st.session_state.translated_text = ""
     st.session_state.current_entry_id = None
     st.session_state.selected_language = "None"
+    st.session_state.doc_title = ""
 
 
 def set_delete_dialog(show=False, entry_id=None):

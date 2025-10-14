@@ -179,8 +179,8 @@ def render_output_area(db):
     if st.session_state.get('simplified_text'):
         st.markdown("---")
         
-        # Get title or use a default
-        title = st.session_state.get('document_title', 'Document')
+        # Get title from session state or use a default
+        title = st.session_state.get('doc_title', 'Document')
         
         # Show export options
         DocumentExporter.render_export_options(
