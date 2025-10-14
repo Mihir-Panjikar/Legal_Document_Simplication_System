@@ -1,6 +1,5 @@
 # Core functionality
 streamlit>=1.18.0
-ollama==0.4.7
 requests==2.32.3
 
 # Document processing
