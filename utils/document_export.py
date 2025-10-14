@@ -80,8 +80,8 @@ class DocumentExporter:
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
         pdf.cell(0, 5, f"Generated on: {timestamp}", ln=1)
         
-        # Return PDF bytes directly (fpdf2 handles Unicode properly)
-        return pdf.output()
+        # Return PDF as bytes (explicitly specify dest='bytes' for fpdf2)
+        return pdf.output(dest='bytes')
 
     @staticmethod
     def export_to_docx(title, original_text, simplified_text, translated_text=None, language=None):
@@ -194,10 +194,15 @@ class DocumentExporter:
         filename = str(filename) if filename else "Simplified_document" 
         filename = filename.replace(" ", "_")
         
-        # Ensure we have bytes
+        # Ensure we have bytes - be careful not to corrupt binary data
         if not isinstance(file_bytes, bytes):
-            # Text formats use UTF-8 encoding
-            file_bytes = str(file_bytes).encode("utf-8")
+            # Only text formats should be encoded as UTF-8
+            # PDF and DOCX should already be bytes
+            if file_format in ["pdf", "docx"]:
+                raise ValueError(f"{file_format} must be bytes, got {type(file_bytes)}")
+            else:
+                # Text format - encode as UTF-8
+                file_bytes = str(file_bytes).encode("utf-8")
                 
         # Encode to base64 for download
         b64 = base64.b64encode(file_bytes).decode()
