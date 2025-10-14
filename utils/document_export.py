@@ -41,7 +41,7 @@ class DocumentExporter:
         def process_text_block(text, header):
             # Add header with fpdf2 positioning
             pdf.set_font("ArialUnicode", size=12)
-            pdf.cell(w=0, h=10, text=header, new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 10, header, new_x="LMARGIN", new_y="NEXT")
             pdf.set_font("ArialUnicode", size=10)
             
             # Safety check
@@ -52,19 +52,17 @@ class DocumentExporter:
             paragraphs = str(text).split('\n')
             for paragraph in paragraphs:
                 if paragraph.strip():  # Skip empty paragraphs
-                    pdf.multi_cell(w=0, h=5, text=paragraph)
+                    pdf.multi_cell(0, 5, paragraph)
                     pdf.ln(2)  # Small space after paragraph
         
         # Document header
         pdf.set_font("ArialUnicode", size=16)
-        pdf.cell(w=0, h=10, text="Legal Document Simplification", 
-                 align="C", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 10, "Legal Document Simplification", align="C", new_x="LMARGIN", new_y="NEXT")
         
         # Document title
         pdf.set_font("ArialUnicode", size=12)
         safe_title = str(title)[:40] if title else "Untitled"
-        pdf.cell(w=0, h=10, text=f"Document: {safe_title}", 
-                 new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 10, f"Document: {safe_title}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)  # Space after title
         
         # Process each text block
@@ -81,8 +79,7 @@ class DocumentExporter:
         pdf.ln(5)
         pdf.set_font("ArialUnicode", size=8)
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
-        pdf.cell(w=0, h=5, text=f"Generated on: {timestamp}", 
-                 new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 5, f"Generated on: {timestamp}", new_x="LMARGIN", new_y="NEXT")
         
         # With fpdf2, we can directly return bytes
         return pdf.output(dest='bytes').decode('latin-1')
