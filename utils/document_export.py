@@ -16,10 +16,9 @@ class DocumentExporter:
         Export document content to PDF with Unicode support using fpdf2
         """
 
-        # Use Devanagari font for native Hindi/Devanagari script support
-        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "Devanagari.ttf"
-
-        # Input validation
+        # Use TiroDevanagariMarathi-Regular for professional Devanagari/Hindi/Marathi support
+        # 408KB font from Tiro Typeworks with complete Devanagari glyph coverage
+        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "TiroDevanagariMarathi-Regular.ttf"        # Input validation
         if title is None:
             title = "Untitled"
         if original_text is None:
@@ -33,15 +32,15 @@ class DocumentExporter:
         pdf.set_margins(20, 20, 20)
         pdf.add_page()
         
-        # Add Devanagari font with Unicode support (native Hindi/Devanagari script)
-        pdf.add_font("Devanagari", "", str(FONT_PATH), uni=True)
+                # Add TiroDevanagariMarathi font - professional Devanagari script support
+        pdf.add_font("TiroDevanagari", "", str(FONT_PATH), uni=True)
         
-        # Process text blocks
+        # Process text blocks with proper Unicode handling
         def process_text_block(text, header):
             # Add header
-            pdf.set_font("Devanagari", size=12)
+            pdf.set_font("TiroDevanagari", size=12)
             pdf.cell(0, 10, header, ln=1)
-            pdf.set_font("Devanagari", size=10)
+            pdf.set_font("TiroDevanagari", size=10)
             
             # Safety check
             if text is None:
@@ -55,11 +54,11 @@ class DocumentExporter:
                     pdf.ln(2)  # Small space after paragraph
         
         # Document header
-        pdf.set_font("Devanagari", size=16)
+        pdf.set_font("TiroDevanagari", size=16)
         pdf.cell(0, 10, "Legal Document Simplification", align="C", ln=1)
         
         # Document title
-        pdf.set_font("Devanagari", size=12)
+        pdf.set_font("TiroDevanagari", size=12)
         safe_title = str(title)[:40] if title else "Untitled"
         pdf.cell(0, 10, f"Document: {safe_title}", ln=1)
         pdf.ln(5)  # Space after title
@@ -76,7 +75,7 @@ class DocumentExporter:
         
         # Add timestamp
         pdf.ln(5)
-        pdf.set_font("Devanagari", size=8)
+        pdf.set_font("TiroDevanagari", size=8)
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
         pdf.cell(0, 5, f"Generated on: {timestamp}", ln=1)
         
