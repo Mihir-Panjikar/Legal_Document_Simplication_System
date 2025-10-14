@@ -271,7 +271,7 @@ def render_model_selection():
         # Display available Groq models
         st.sidebar.markdown("#### Available Groq Models")
         for model_id, model_info in AVAILABLE_GROQ_MODELS.items():
-            st.sidebar.markdown(f"- **{model_info['name']}** ({model_id})")
+            st.sidebar.markdown(f"- **{model_info['name']}**")
             st.sidebar.markdown(f"  {model_info['description']}")
 
         st.sidebar.markdown("---")
@@ -281,8 +281,8 @@ def render_model_selection():
         current_model = get_selected_groq_model()
         model_list = list(AVAILABLE_GROQ_MODELS.keys())
         
-        # Create display names for the selectbox
-        model_options = [f"{AVAILABLE_GROQ_MODELS[m]['name']} ({m})" for m in model_list]
+        # Create display names for the selectbox (name only, no model ID)
+        model_options = [AVAILABLE_GROQ_MODELS[m]['name'] for m in model_list]
         current_index = model_list.index(current_model) if current_model in model_list else 0
         
         selected_option = st.sidebar.selectbox(
@@ -297,14 +297,14 @@ def render_model_selection():
 
         if selected_model != current_model:
             set_selected_groq_model(selected_model)
-            st.sidebar.success(f"Model changed to {selected_model}")
+            st.sidebar.success(f"Model changed to {AVAILABLE_GROQ_MODELS[selected_model]['name']}")
 
         # Check Groq API status
         st.sidebar.markdown("### API Status")
         if check_groq_connection():
-            st.sidebar.success("Groq API connected ✓")
+            st.sidebar.success("Connected ✓")
         else:
-            st.sidebar.error("Groq API not available ✗")
+            st.sidebar.error("API not available ✗")
 
         st.sidebar.divider()
 
