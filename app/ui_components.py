@@ -266,10 +266,9 @@ def render_model_selection():
 
     # Render model selection only if "Advanced" is clicked
     if st.session_state.show_advanced:
-        st.sidebar.markdown("### Model Settings")
 
         # Display available Groq models
-        st.sidebar.markdown("#### Available Groq Models")
+        st.sidebar.markdown("### Available Groq Models")
         for model_id, model_info in AVAILABLE_GROQ_MODELS.items():
             st.sidebar.markdown(f"- **{model_info['name']}**")
             st.sidebar.markdown(f"  {model_info['description']}")
