@@ -1,7 +1,6 @@
 import streamlit as st
-import asyncio
 from utils.Simplification import simplify_document
-from utils.translation import translate_text
+from utils.translation import translate_with_retries
 
 
 def process_simplification(db, user_input):
@@ -34,9 +33,9 @@ def process_simplification(db, user_input):
 def process_translation(db, lang_code, language):
     """Process the translation of simplified text"""
     with st.spinner(f"Translating to {language}..."):
-        translated_text = asyncio.run(
-            translate_text(
-                st.session_state.simplified_text, src="en", dest=lang_code)
+        translated_text = translate_with_retries(
+            st.session_state.simplified_text, 
+            target_language=lang_code
         )
         st.session_state.translated_text = translated_text
         st.session_state.selected_language = language

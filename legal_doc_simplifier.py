@@ -13,7 +13,7 @@ def main():
     """Main application entry point"""
     # Page setup
     st.set_page_config(
-        page_title="Legal Document Simplifier (Ollama)", layout="wide")
+        page_title="Legal Document Simplifier", layout="wide")
 
     # Initialize database
     db = get_database()
@@ -23,7 +23,6 @@ def main():
 
     # Set page title
     st.title("Legal Document Simplification System")
-    st.markdown("##### Using Ollama for local AI processing")
 
     # Show delete confirmation dialog if needed - MOVED UP before any other UI components
     if st.session_state.show_delete_dialog:
