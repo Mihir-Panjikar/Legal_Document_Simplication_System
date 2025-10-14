@@ -11,9 +11,22 @@ from app.ui_components import (
 
 def main():
     """Main application entry point"""
-    # Page setup
+    # Page setup - optimized for share previews
     st.set_page_config(
-        page_title="Legal Document Simplifier", layout="wide")
+        page_title="Legal Document Simplifier - AI-Powered Legal Text Translation",
+        page_icon="⚖️",
+        layout="wide",
+        initial_sidebar_state="expanded",
+        menu_items={
+            'About': '''
+            # Legal Document Simplification System
+            
+            Simplify complex legal documents into plain language.
+            Supports Hindi and Marathi translation.
+            
+            '''
+        }
+    )
 
     # Initialize database
     db = get_database()

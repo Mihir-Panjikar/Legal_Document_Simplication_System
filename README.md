@@ -1,5 +1,9 @@
 # Legal Document Simplification System
 
+**Simplify legal documents with AI. Translate to Hindi/Marathi.**
+
+---
+
 A Streamlit-based application that uses **Groq Cloud API** to simplify complex legal documents into easy-to-understand language. The system supports translation to multiple Indian languages and document export in various formats.
 
 ## ✨ Features
