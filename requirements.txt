@@ -1,3 +1,5 @@
+# Python version: 3.11.11 (see .python-version and runtime.txt)
+
 # Core functionality
 streamlit>=1.18.0
 requests==2.32.3
