@@ -16,8 +16,8 @@ class DocumentExporter:
         Export document content to PDF with Unicode support using fpdf2
         """
 
-        # Use DejaVu font for better Unicode/Devanagari (Hindi) support
-        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "DejaVuSansCondensed.ttf"
+        # Use ArialUnicode for comprehensive Unicode support (includes Devanagari)
+        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "ArialUnicode.ttf"
 
         # Input validation
         if title is None:
@@ -33,15 +33,15 @@ class DocumentExporter:
         pdf.set_margins(20, 20, 20)
         pdf.add_page()
         
-        # Add DejaVu font with Unicode support for Hindi/Devanagari
-        pdf.add_font("DejaVu", "", str(FONT_PATH), uni=True)
+        # Add ArialUnicode font with Unicode support (supports Devanagari/Hindi)
+        pdf.add_font("ArialUnicode", "", str(FONT_PATH), uni=True)
         
         # Process text blocks
         def process_text_block(text, header):
             # Add header
-            pdf.set_font("DejaVu", size=12)
+            pdf.set_font("ArialUnicode", size=12)
             pdf.cell(0, 10, header, ln=1)
-            pdf.set_font("DejaVu", size=10)
+            pdf.set_font("ArialUnicode", size=10)
             
             # Safety check
             if text is None:
@@ -55,11 +55,11 @@ class DocumentExporter:
                     pdf.ln(2)  # Small space after paragraph
         
         # Document header
-        pdf.set_font("DejaVu", size=16)
+        pdf.set_font("ArialUnicode", size=16)
         pdf.cell(0, 10, "Legal Document Simplification", align="C", ln=1)
         
         # Document title
-        pdf.set_font("DejaVu", size=12)
+        pdf.set_font("ArialUnicode", size=12)
         safe_title = str(title)[:40] if title else "Untitled"
         pdf.cell(0, 10, f"Document: {safe_title}", ln=1)
         pdf.ln(5)  # Space after title
@@ -76,11 +76,11 @@ class DocumentExporter:
         
         # Add timestamp
         pdf.ln(5)
-        pdf.set_font("DejaVu", size=8)
+        pdf.set_font("ArialUnicode", size=8)
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
         pdf.cell(0, 5, f"Generated on: {timestamp}", ln=1)
         
-        # Return PDF bytes directly without decoding (fpdf2 handles Unicode properly)
+        # Return PDF bytes directly (fpdf2 handles Unicode properly)
         return pdf.output()
 
     @staticmethod
