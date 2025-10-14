@@ -3,6 +3,7 @@
 # Core functionality
 streamlit>=1.18.0
 requests==2.32.3
+python-dotenv==1.0.0
 
 # Document processing
 fpdf2==2.4.1

@@ -7,6 +7,19 @@ import os
 import streamlit as st
 from datetime import datetime
 from typing import Dict, Tuple
+from pathlib import Path
+
+# Load .env file if it exists (for local development)
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"✓ Loaded environment from {env_path}")
+except ImportError:
+    print("⚠️  python-dotenv not installed. Install with: pip install python-dotenv")
+except Exception as e:
+    print(f"⚠️  Could not load .env file: {e}")
 
 
 # ==============================================================================
@@ -40,14 +53,14 @@ DEFAULT_MODEL = "llama-3.1-8b-instant"
 
 def get_rate_limits() -> Dict[str, Dict[str, int]]:
     """
-    Get rate limits from Streamlit secrets with fallback to documented defaults.
+    Get rate limits from Streamlit secrets or .env file with fallback to documented defaults.
     Allows admins to adjust limits without code changes if Groq updates them.
     
     Returns:
         Dict with rate limits per model
     """
     try:
-        # Try to read from Streamlit secrets first (preferred)
+        # Try to read from Streamlit secrets first (preferred for production)
         if hasattr(st, 'secrets'):
             return {
                 "llama-3.1-8b-instant": {
@@ -59,6 +72,24 @@ def get_rate_limits() -> Dict[str, Dict[str, int]]:
                     "tokens_per_minute": int(st.secrets.get("GROQ_TPM_70B", 300000)),
                     "requests_per_minute": int(st.secrets.get("GROQ_RPM_70B", 1000)),
                     "requests_per_day": int(st.secrets.get("GROQ_RPD_70B", 14400)),
+                },
+            }
+    except Exception:
+        pass
+    
+    # Try environment variables from .env file (local development)
+    try:
+        if os.getenv("GROQ_TPM_8B"):
+            return {
+                "llama-3.1-8b-instant": {
+                    "tokens_per_minute": int(os.getenv("GROQ_TPM_8B", "250000")),
+                    "requests_per_minute": int(os.getenv("GROQ_RPM_8B", "1000")),
+                    "requests_per_day": int(os.getenv("GROQ_RPD_8B", "14400")),
+                },
+                "llama-3.3-70b-versatile": {
+                    "tokens_per_minute": int(os.getenv("GROQ_TPM_70B", "300000")),
+                    "requests_per_minute": int(os.getenv("GROQ_RPM_70B", "1000")),
+                    "requests_per_day": int(os.getenv("GROQ_RPD_70B", "14400")),
                 },
             }
     except Exception:
@@ -80,43 +111,47 @@ def get_rate_limits() -> Dict[str, Dict[str, int]]:
 
 
 def get_warning_threshold() -> int:
-    """Get the warning threshold percentage from secrets or default to 80%"""
+    """Get the warning threshold percentage from secrets, .env, or default to 80%"""
     try:
         if hasattr(st, 'secrets'):
             return int(st.secrets.get("RATE_LIMIT_WARNING_THRESHOLD", 80))
     except Exception:
         pass
-    return 80
+    # Try .env file
+    return int(os.getenv("RATE_LIMIT_WARNING_THRESHOLD", "80"))
 
 
 def get_max_tokens_per_request() -> int:
-    """Get max tokens per request from secrets or default to 4096"""
+    """Get max tokens per request from secrets, .env, or default to 4096"""
     try:
         if hasattr(st, 'secrets'):
             return int(st.secrets.get("MAX_TOKENS_PER_REQUEST", 4096))
     except Exception:
         pass
-    return 4096
+    # Try .env file
+    return int(os.getenv("MAX_TOKENS_PER_REQUEST", "4096"))
 
 
 def get_api_timeout() -> int:
-    """Get API timeout in seconds from secrets or default to 30"""
+    """Get API timeout in seconds from secrets, .env, or default to 30"""
     try:
         if hasattr(st, 'secrets'):
             return int(st.secrets.get("API_TIMEOUT_SECONDS", 30))
     except Exception:
         pass
-    return 30
+    # Try .env file
+    return int(os.getenv("API_TIMEOUT_SECONDS", "30"))
 
 
 def is_debug_mode() -> bool:
-    """Check if debug mode is enabled from secrets"""
+    """Check if debug mode is enabled from secrets or .env"""
     try:
         if hasattr(st, 'secrets'):
             return str(st.secrets.get("DEBUG_MODE", "false")).lower() == "true"
     except Exception:
         pass
-    return False
+    # Try .env file
+    return str(os.getenv("DEBUG_MODE", "false")).lower() == "true"
 
 
 # ==============================================================================
