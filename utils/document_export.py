@@ -16,7 +16,8 @@ class DocumentExporter:
         Export document content to PDF with Unicode support using fpdf2
         """
 
-        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "ArialUnicode.ttf"
+        # Use DejaVu font for better Unicode/Devanagari (Hindi) support
+        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "DejaVuSansCondensed.ttf"
 
         # Input validation
         if title is None:
@@ -32,17 +33,15 @@ class DocumentExporter:
         pdf.set_margins(20, 20, 20)
         pdf.add_page()
         
-        pdf.add_font("ArialUnicode", "",str(FONT_PATH) , uni=True)
+        # Add DejaVu font with Unicode support for Hindi/Devanagari
+        pdf.add_font("DejaVu", "", str(FONT_PATH), uni=True)
         
-        # With fpdf2, we can directly work with Unicode text
-        # No need for the sanitize_text function
-        
-        # Process text blocks with better fpdf2 features
+        # Process text blocks
         def process_text_block(text, header):
             # Add header
-            pdf.set_font("ArialUnicode", size=12)
+            pdf.set_font("DejaVu", size=12)
             pdf.cell(0, 10, header, ln=1)
-            pdf.set_font("ArialUnicode", size=10)
+            pdf.set_font("DejaVu", size=10)
             
             # Safety check
             if text is None:
@@ -56,11 +55,11 @@ class DocumentExporter:
                     pdf.ln(2)  # Small space after paragraph
         
         # Document header
-        pdf.set_font("ArialUnicode", size=16)
+        pdf.set_font("DejaVu", size=16)
         pdf.cell(0, 10, "Legal Document Simplification", align="C", ln=1)
         
         # Document title
-        pdf.set_font("ArialUnicode", size=12)
+        pdf.set_font("DejaVu", size=12)
         safe_title = str(title)[:40] if title else "Untitled"
         pdf.cell(0, 10, f"Document: {safe_title}", ln=1)
         pdf.ln(5)  # Space after title
@@ -77,12 +76,12 @@ class DocumentExporter:
         
         # Add timestamp
         pdf.ln(5)
-        pdf.set_font("ArialUnicode", size=8)
+        pdf.set_font("DejaVu", size=8)
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
         pdf.cell(0, 5, f"Generated on: {timestamp}", ln=1)
         
-        # With fpdf2, we can directly return bytes
-        return pdf.output(dest='bytes').decode('latin-1')
+        # Return PDF bytes directly without decoding (fpdf2 handles Unicode properly)
+        return pdf.output()
 
     @staticmethod
     def export_to_docx(title, original_text, simplified_text, translated_text=None, language=None):
@@ -195,14 +194,12 @@ class DocumentExporter:
         filename = str(filename) if filename else "Simplified_document" 
         filename = filename.replace(" ", "_")
         
-        # Ensure we have bytes (different encoding for PDF vs text)
+        # Ensure we have bytes
         if not isinstance(file_bytes, bytes):
-            if file_format == "pdf":
-                file_bytes = str(file_bytes).encode("latin-1")  # PDF binary data needs latin-1
-            else:
-                file_bytes = str(file_bytes).encode("utf-8")  # Text data can use utf-8
+            # Text formats use UTF-8 encoding
+            file_bytes = str(file_bytes).encode("utf-8")
                 
-        # Rest of the method remains the same
+        # Encode to base64 for download
         b64 = base64.b64encode(file_bytes).decode()
         
         # Map format to MIME type
