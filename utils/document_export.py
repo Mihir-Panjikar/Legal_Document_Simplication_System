@@ -34,8 +34,9 @@ class DocumentExporter:
         pdf.set_margins(20, 20, 20)
         pdf.add_page()
         
-        # Add TiroDevanagariMarathi font (uni parameter deprecated in fpdf2)
-        pdf.add_font("TiroDevanagari", "", str(FONT_PATH))
+        # Add TiroDevanagariMarathi font with Unicode support
+        # Note: uni parameter still needed for proper Unicode handling in production
+        pdf.add_font("TiroDevanagari", "", str(FONT_PATH), uni=True)
         
         # Process text blocks with proper Unicode handling
         def process_text_block(text, header):
