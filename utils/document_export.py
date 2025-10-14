@@ -18,7 +18,9 @@ class DocumentExporter:
 
         # Use TiroDevanagariMarathi-Regular for professional Devanagari/Hindi/Marathi support
         # 408KB font from Tiro Typeworks with complete Devanagari glyph coverage
-        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "TiroDevanagariMarathi-Regular.ttf"        # Input validation
+        FONT_PATH = Path(__file__).resolve().parent.parent / "assets" / "TiroDevanagariMarathi-Regular.ttf"
+        
+        # Input validation and Unicode normalization
         if title is None:
             title = "Untitled"
         if original_text is None:
@@ -32,35 +34,45 @@ class DocumentExporter:
         pdf.set_margins(20, 20, 20)
         pdf.add_page()
         
-                # Add TiroDevanagariMarathi font - professional Devanagari script support
-        pdf.add_font("TiroDevanagari", "", str(FONT_PATH), uni=True)
+        # Add TiroDevanagariMarathi font (uni parameter deprecated in fpdf2)
+        pdf.add_font("TiroDevanagari", "", str(FONT_PATH))
         
         # Process text blocks with proper Unicode handling
         def process_text_block(text, header):
             # Add header
             pdf.set_font("TiroDevanagari", size=12)
-            pdf.cell(0, 10, header, ln=1)
+            pdf.cell(0, 10, header)
+            pdf.ln()  # Move to next line
+            
             pdf.set_font("TiroDevanagari", size=10)
             
             # Safety check
             if text is None:
                 return
+            
+            # Ensure text is properly encoded as Unicode string
+            if isinstance(text, bytes):
+                text = text.decode('utf-8')
+            text = str(text)
                 
             # Process paragraphs
-            paragraphs = str(text).split('\n')
+            paragraphs = text.split('\n')
             for paragraph in paragraphs:
                 if paragraph.strip():  # Skip empty paragraphs
-                    pdf.multi_cell(0, 5, paragraph)
+                    clean_para = paragraph.strip()
+                    pdf.multi_cell(0, 5, clean_para)
                     pdf.ln(2)  # Small space after paragraph
         
         # Document header
         pdf.set_font("TiroDevanagari", size=16)
-        pdf.cell(0, 10, "Legal Document Simplification", align="C", ln=1)
+        pdf.cell(0, 10, "Legal Document Simplification", align="C")
+        pdf.ln()
         
         # Document title
         pdf.set_font("TiroDevanagari", size=12)
         safe_title = str(title)[:40] if title else "Untitled"
-        pdf.cell(0, 10, f"Document: {safe_title}", ln=1)
+        pdf.cell(0, 10, f"Document: {safe_title}")
+        pdf.ln()
         pdf.ln(5)  # Space after title
         
         # Process each text block
@@ -77,10 +89,11 @@ class DocumentExporter:
         pdf.ln(5)
         pdf.set_font("TiroDevanagari", size=8)
         timestamp = str(st.session_state.get('timestamp', 'N/A'))
-        pdf.cell(0, 5, f"Generated on: {timestamp}", ln=1)
+        pdf.cell(0, 5, f"Generated on: {timestamp}")
+        pdf.ln()
         
-        # Return PDF as bytes (fpdf2 returns bytearray, convert to bytes)
-        pdf_output = pdf.output(dest='bytes')
+        # Return PDF as bytes (fpdf2 output() without dest parameter)
+        pdf_output = pdf.output()
         return bytes(pdf_output) if isinstance(pdf_output, bytearray) else pdf_output
 
     @staticmethod
