@@ -22,9 +22,11 @@ def initialize_session_state():
         st.session_state.show_export_options = False
     if "timestamp" not in st.session_state:
         st.session_state.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if "ollama_model" not in st.session_state:
-        from utils.ollama_config import DEFAULT_MODEL
-        st.session_state.ollama_model = DEFAULT_MODEL
+    if "groq_model" not in st.session_state:
+        from utils.groq_config import DEFAULT_MODEL
+        st.session_state.groq_model = DEFAULT_MODEL
+    if "groq_api_key" not in st.session_state:
+        st.session_state.groq_api_key = ""
     if "doc_title" not in st.session_state:
         st.session_state.doc_title = ""
 
