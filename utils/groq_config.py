@@ -20,13 +20,13 @@ AVAILABLE_GROQ_MODELS = {
     "llama-3.1-8b-instant": {
         "name": "Llama 3.1 8B (Fast)",
         "speed": "560 tokens/sec",
-        "description": "Fast inference, excellent for legal text",
+        "description": "Fast simplification, great for legal text",
         "use_case": "General simplification and translation",
     },
     "llama-3.3-70b-versatile": {
         "name": "Llama 3.3 70B (Quality)",
         "speed": "280 tokens/sec", 
-        "description": "Higher quality for complex documents",
+        "description": "Higher quality model for complex documents",
         "use_case": "Complex legal documents requiring nuance",
     },
 }
