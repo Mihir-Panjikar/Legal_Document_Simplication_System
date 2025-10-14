@@ -13,16 +13,25 @@ def process_simplification(db, user_input):
         simplified_text = simplify_document(user_input)
         st.session_state.simplified_text = simplified_text
 
+        # Get doc_title from session state
+        doc_title = st.session_state.get('doc_title', '').strip()
+        doc_title = doc_title if doc_title else None
+
         # Save to database
         if st.session_state.current_entry_id:
             # Update existing entry
             db.update_entry(
                 st.session_state.current_entry_id,
-                simplified_text=simplified_text
+                simplified_text=simplified_text,
+                doc_title=doc_title
             )
         else:
-            # Create new entry
-            entry_id = db.add_entry(user_input, simplified_text)
+            # Create new entry with doc_title if available
+            entry_id = db.add_entry(
+                user_input, 
+                simplified_text, 
+                doc_title=doc_title
+            )
             st.session_state.current_entry_id = entry_id
 
         # Clear translated text since we have new simplified text

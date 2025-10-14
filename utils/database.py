@@ -28,10 +28,13 @@ class HistoryDatabase:
         ''')
         self.conn.commit()
 
-    def add_entry(self, input_text, simplified_text=None, translated_text=None, language=None):
+    def add_entry(self, input_text, simplified_text=None, translated_text=None, language=None, doc_title=None):
         """Add a new entry to the history database."""
-        # Create a title from the first 30 chars of input
-        title = input_text[:30] + "..." if len(input_text) > 30 else input_text
+        # Use doc_title if provided, otherwise create from first 50 chars of input
+        if doc_title and doc_title.strip():
+            title = doc_title.strip()
+        else:
+            title = input_text[:50] + "..." if len(input_text) > 50 else input_text
 
         self.cursor.execute('''
         INSERT INTO history (input_text, simplified_text, translated_text, language, title)
@@ -40,7 +43,7 @@ class HistoryDatabase:
         self.conn.commit()
         return self.cursor.lastrowid
 
-    def update_entry(self, entry_id, simplified_text=None, translated_text=None, language=None):
+    def update_entry(self, entry_id, simplified_text=None, translated_text=None, language=None, doc_title=None):
         """Update an existing history entry."""
         # Build the update query dynamically based on which fields are provided
         update_fields = []
@@ -57,6 +60,10 @@ class HistoryDatabase:
         if language is not None:
             update_fields.append("language = ?")
             update_values.append(language)
+
+        if doc_title is not None:
+            update_fields.append("title = ?")
+            update_values.append(doc_title.strip() if doc_title.strip() else None)
 
         if not update_fields:
             return
